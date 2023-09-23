@@ -1,0 +1,3 @@
+include 'it.unibo.spe.mdd.sheduler'
+include 'it.unibo.spe.mdd.sheduler.ide'
+include 'it.unibo.spe.mdd.sheduler.web'

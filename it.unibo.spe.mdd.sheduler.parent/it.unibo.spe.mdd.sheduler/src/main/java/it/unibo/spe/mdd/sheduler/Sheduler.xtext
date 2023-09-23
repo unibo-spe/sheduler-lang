@@ -1,0 +1,9 @@
+grammar it.unibo.spe.mdd.sheduler.Sheduler with org.eclipse.xtext.common.Terminals
+
+generate sheduler "http://www.unibo.it/spe/mdd/sheduler/Sheduler"
+
+Model:
+	greetings+=Greeting*;
+	
+Greeting:
+	'Hello' name=ID '!';
