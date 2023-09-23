@@ -2,6 +2,8 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=xtext,gradle,eclipse,intellij
 
 .idea
+xtext-gen
+xtend-gen
 
 ### Eclipse ###
 .metadata
