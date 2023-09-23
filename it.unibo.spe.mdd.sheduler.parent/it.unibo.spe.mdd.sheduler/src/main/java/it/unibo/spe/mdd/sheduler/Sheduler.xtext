@@ -2,8 +2,54 @@ grammar it.unibo.spe.mdd.sheduler.Sheduler with org.eclipse.xtext.common.Termina
 
 generate sheduler "http://www.unibo.it/spe/mdd/sheduler/Sheduler"
 
-Model:
-	greetings+=Greeting*;
+TaskPool:
+	tasks+=Task+
+;
 	
-Greeting:
-	'Hello' name=ID '!';
+Task:
+	'schedule' ('task' name=ID)? '{'
+		'command' command=STRING
+		('entry' 'point' entrypoint=STRING)?
+		(
+			'in' relative=RelativeTime |
+			'at' absolute=AbsoluteTime 
+		)
+		('repeat' 'every' period=RelativeTime)?
+	'}'
+;
+
+AbsoluteTime:
+	date=Date time=ClockTime
+;
+	
+Date: year=INT '/' month=INT '/' day=INT;
+
+ClockTime: hour=INT ':' minute=INT 
+	(':' second=INT (':' millisecond=INT (':' nanosecond=INT)?)?)?
+;
+	
+RelativeTime:
+	timeSpans += TimeSpan (('and' | ',' | '+') timeSpans += TimeSpan)*
+;
+
+TimeSpan: duration=INT unit=(TimeUnit|LongTimeUnit);
+
+enum TimeUnit: 
+	NANOSECONDS = 'ns' | 
+	MILLISECONDS = 'ms' |
+	SECONDS = 's' |
+	MINUTES = 'm' | 
+	HOURS = 'h' |
+	DAYS = 'd' |
+	WEEKS = 'w' |
+	YEARS = 'y' ;
+	
+enum LongTimeUnit returns TimeUnit: 
+	NANOSECONDS = 'nanoseconds' | 
+	MILLISECONDS = 'milliseconds' |
+	SECONDS = 'seconds' |
+	MINUTES = 'minutes' | 
+	HOURS = 'hours' |
+	DAYS = 'days' |
+	WEEKS = 'weeks' |
+	YEARS = 'years' ;
