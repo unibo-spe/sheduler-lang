@@ -1,3 +1,8 @@
+plugins {
+	id 'com.github.johnrengelman.shadow' version '8.1.1'
+	id 'application'
+}
+
 dependencies {
 	testImplementation 'org.junit.jupiter:junit-jupiter-api'
 	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
@@ -7,6 +12,7 @@ dependencies {
 	api "org.eclipse.xtext:org.eclipse.xtext:${xtextVersion}"
 	api "org.eclipse.xtext:org.eclipse.xtext.xbase:${xtextVersion}"
 }
+
 configurations {
 	mwe2 {
 		extendsFrom compileClasspath
@@ -21,6 +27,7 @@ dependencies {
 }
 
 task generateXtextLanguage(type: JavaExec) {
+	group = "Xtext"
 	mainClass = 'org.eclipse.emf.mwe2.launch.runtime.Mwe2Launcher'
 	classpath = configurations.mwe2
 	inputs.file "src/main/java/it/unibo/spe/mdd/sheduler/GenerateSheduler.mwe2"
@@ -31,10 +38,25 @@ task generateXtextLanguage(type: JavaExec) {
 	args += "rootPath=/${projectDir}/.."
 }
 
+application {
+	mainClass = "it.unibo.spe.mdd.sheduler.generator.Main"
+}
+
 test {
 	useJUnitPlatform()
 }
+
 processResources.dependsOn(generateXtextLanguage)
 generateXtext.dependsOn(generateXtextLanguage)
 clean.dependsOn(cleanGenerateXtextLanguage)
 eclipse.classpath.plusConfigurations += [configurations.mwe2]
+
+shadowJar {
+	from(project.extensions.findByType(JavaPluginExtension.class).sourceSets.main.output)
+	exclude('META-INF/INDEX.LIST', 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA','schema/*',
+			'.options', '.api_description', '*.profile', '*.html', 'about.*', 'about_files/*',
+			'plugin.xml', 'systembundle.properties', 'profile.list')
+	configurations = [project.configurations.runtimeClasspath]
+	archiveClassifier = 'compiler'
+	mergeServiceFiles()
+}
