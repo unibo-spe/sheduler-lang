@@ -1,0 +1,6 @@
+schedule task greetWorldFrequently {
+    command "echo hello"
+    entry point "/bin/sh -c"
+    in 5 minutes
+    repeat every 1 hours
+}
