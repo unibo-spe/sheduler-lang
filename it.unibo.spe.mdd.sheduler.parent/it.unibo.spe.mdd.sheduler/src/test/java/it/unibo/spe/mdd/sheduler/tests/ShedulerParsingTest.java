@@ -4,7 +4,10 @@
 package it.unibo.spe.mdd.sheduler.tests;
 
 import com.google.inject.Inject;
+import it.unibo.spe.mdd.sheduler.TimeUtils;
+import it.unibo.spe.mdd.sheduler.sheduler.Task;
 import it.unibo.spe.mdd.sheduler.sheduler.TaskPool;
+import it.unibo.spe.mdd.sheduler.sheduler.TimeUnit;
 import org.eclipse.xtext.testing.InjectWith;
 import org.eclipse.xtext.testing.extensions.InjectionExtension;
 import org.eclipse.xtext.testing.util.ParseHelper;
@@ -12,30 +15,38 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.InputStreamReader;
+import java.time.Duration;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(InjectionExtension.class)
 @InjectWith(ShedulerInjectorProvider.class)
-class ShedulerParsingTest {
+class ShedulerParsingTest extends AbstractTest {
 	@Inject
 	private ParseHelper<TaskPool> parseHelper;
-
-	private String loadResourceAsStringByName(String name) {
-		try (BufferedReader reader = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream(name)))) {
-			return reader.lines().reduce("", (a, b) -> a + b + "\n");
-		} catch (Exception e) {
-			throw new IllegalArgumentException("Cannot load resource " + name, e);
-		}
-	}
 	
 	@Test
 	void loadModel() throws Exception {
-		var text = loadResourceAsStringByName("HelloWorld.shed");
-		var result = parseHelper.parse(text);
+		String text = loadResourceAsStringByName("HelloWorld.shed");
+		TaskPool result = parseHelper.parse(text);
 		Assertions.assertNotNull(result);
 		var errors = result.eResource().getErrors();
-		Assertions.assertTrue(errors.isEmpty(), "Unexpected errors: " + errors);
+		assertTrue(errors.isEmpty(), "Unexpected errors: " + errors);
+		assertEquals(1, result.getTasks().size());
+		Task task = result.getTasks().get(0);
+		assertEquals("greetWorldFrequently", task.getName());
+		assertEquals("echo hello", task.getCommand());
+		assertEquals("/bin/sh -c", task.getEntrypoint());
+		assertNull(task.getAbsolute());
+		assertNotNull(task.getRelative());
+		assertEquals(1, task.getRelative().getTimeSpans().size());
+		var timeSpan = task.getRelative().getTimeSpans().get(0);
+		assertEquals(Duration.ofMinutes(5), TimeUtils.toDuration(timeSpan));
+		assertEquals(TimeUnit.MINUTES, timeSpan.getUnit());
+		var period = task.getPeriod();
+		assertNotNull(period);
+		assertEquals(1, period.getTimeSpans().size());
+		timeSpan = period.getTimeSpans().get(0);
+		assertEquals(Duration.ofHours(1), TimeUtils.toDuration(timeSpan));
 	}
 }

@@ -3,6 +3,8 @@
  */
 package it.unibo.spe.mdd.sheduler.generator;
 
+import it.unibo.spe.mdd.sheduler.TimeUtils;
+import it.unibo.spe.mdd.sheduler.sheduler.Task;
 import it.unibo.spe.mdd.sheduler.sheduler.TaskPool;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.Resource;
@@ -10,8 +12,11 @@ import org.eclipse.xtext.generator.AbstractGenerator;
 import org.eclipse.xtext.generator.IFileSystemAccess2;
 import org.eclipse.xtext.generator.IGeneratorContext;
 
+import java.io.*;
+import java.util.Map;
 import java.util.Spliterator;
 import java.util.Spliterators;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -34,10 +39,107 @@ public class ShedulerGenerator extends AbstractGenerator {
 		contentsStream(resource)
 				.filter(it -> it instanceof TaskPool)
 				.map(it -> (TaskPool) it)
-				.forEach(it -> doGenerate(it, fsa, context));
+				.forEach(it -> doGenerate(new File(resource.getURI().toFileString()), it, fsa, context));
 	}
 
-	private void doGenerate(TaskPool taskPool, IFileSystemAccess2 fsa, IGeneratorContext context) {
-		fsa.generateFile("sheduler.txt", taskPool.toString());
+	private String javaTemplate(String name, Map<String, String> replacements) throws IOException {
+		InputStream stream = getClass().getResourceAsStream(name + ".java.template");
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream))) {
+			var template = reader.lines().collect(Collectors.joining("\n"));
+			return replace(template, replacements);
+		}
 	}
+
+	private String replace(String template, Map<String, String> replacements) {
+		for (var entry : replacements.entrySet()) {
+			template = template.replace("__" + entry.getKey() + "__", entry.getValue());
+		}
+		return template;
+	}
+
+	private String javaTemplate(String name) throws IOException {
+		return javaTemplate(name, Map.of());
+	}
+
+	private void doGenerate(File inputFile, TaskPool taskPool, IFileSystemAccess2 fsa, IGeneratorContext context) {
+		try {
+			var runtimeClass = javaTemplate("ShedulerRuntime");
+			var taskClass = javaTemplate("ShedulerTask");
+			fsa.generateFile("ShedulerRuntime.java", runtimeClass);
+			fsa.generateFile("ShedulerTask.java", taskClass);
+			var inputFileName = inputFile.getName().split("\\.")[0];
+			var systemClass = javaTemplate("ShedulerSystem", Map.of(
+					"INPUT", inputFileName,
+					"TASKS", generateTasks(taskPool)
+			));
+			fsa.generateFile("ShedulerSystem_" + inputFileName + ".java", systemClass);
+		} catch (IOException e) {
+			throw new Error("Buggy generator: missing template.", e);
+		}
+	}
+
+	private String generateTasks(TaskPool taskPool) {
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < taskPool.getTasks().size(); i++) {
+			sb.append(generateTask(i, taskPool.getTasks().get(i)));
+			sb.append("\n");
+		}
+		return sb.toString();
+	}
+
+	private String generateTask(int i, Task task) {
+		if (task.getAbsolute() == null && task.getRelative() != null) {
+			return generateRelativeTask(i, task);
+		} else if (task.getAbsolute() != null && task.getRelative() == null) {
+			return generateAbsoluteTask(i, task);
+		} else {
+			throw new Error("Buggy generator: task " + i + " has both absolute and relative time.");
+		}
+	}
+
+	private String templateForAbsoluteTask(Task task) {
+		var template = "SheduleTask task__INDEX__ = SheduleTask.at(__NAME__, \"__CMD__\", \"__ENTRY__\", LocalDateTime.parse(\"__WHEN__\"));";
+		if (task.getPeriod() != null) {
+			template += "\ntask__INDEX__.setPeriodic(Duration.parse(\"__PERIOD__\"));";
+		}
+		return template;
+	}
+
+	private String generateAbsoluteTask(int i, Task task) {
+		return replace(
+				templateForAbsoluteTask(task),
+				Map.of(
+						"INDEX", String.valueOf(i),
+						"NAME", task.getName() == null ? "null" : "\"" + task.getName() + "\"",
+						"CMD", task.getCommand(),
+						"ENTRY", task.getEntrypoint(),
+						"WHEN", TimeUtils.toDuration(task.getRelative()).toString(),
+						"PERIOD", task.getPeriod() == null ? "" : TimeUtils.toDuration(task.getPeriod()).toString()
+				)
+		);
+	}
+
+	private String templateForRelativeTask(Task task) {
+		var template = "SheduleTask task__INDEX__ = SheduleTask.in(__NAME__, \"__CMD__\", \"__ENTRY__\", Duration.parse(\"__WHEN__\"));";
+		if (task.getPeriod() != null) {
+			template += "\ntask__INDEX__.setPeriodic(Duration.parse(\"__PERIOD__\"));";
+		}
+		return template;
+	}
+
+	private String generateRelativeTask(int i, Task task) {
+		return replace(
+				templateForRelativeTask(task),
+				Map.of(
+						"INDEX", String.valueOf(i),
+						"NAME", task.getName() == null ? "null" : "\"" + task.getName() + "\"",
+						"CMD", task.getCommand(),
+						"ENTRY", task.getEntrypoint(),
+						"WHEN", TimeUtils.toDuration(task.getRelative()).toString(),
+						"PERIOD", task.getPeriod() == null ? "" : TimeUtils.toDuration(task.getPeriod()).toString()
+				)
+		);
+	}
+
+
 }
