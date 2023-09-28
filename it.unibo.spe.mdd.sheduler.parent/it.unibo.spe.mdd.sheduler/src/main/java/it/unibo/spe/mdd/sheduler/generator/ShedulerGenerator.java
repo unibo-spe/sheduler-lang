@@ -98,7 +98,7 @@ public class ShedulerGenerator extends AbstractGenerator {
 	}
 
 	private String templateForAbsoluteTask(Task task) {
-		var template = "SheduleTask task__INDEX__ = SheduleTask.at(__NAME__, \"__CMD__\", \"__ENTRY__\", LocalDateTime.parse(\"__WHEN__\"));";
+		var template = "ShedulerTask task__INDEX__ = ShedulerTask.at(__NAME__, \"__CMD__\", \"__ENTRY__\", LocalDateTime.parse(\"__WHEN__\"));";
 		if (task.getPeriod() != null) {
 			template += "\ntask__INDEX__.setPeriodic(Duration.parse(\"__PERIOD__\"));";
 		}
@@ -120,7 +120,7 @@ public class ShedulerGenerator extends AbstractGenerator {
 	}
 
 	private String templateForRelativeTask(Task task) {
-		var template = "SheduleTask task__INDEX__ = SheduleTask.in(__NAME__, \"__CMD__\", \"__ENTRY__\", Duration.parse(\"__WHEN__\"));";
+		var template = "ShedulerTask task__INDEX__ = ShedulerTask.in(__NAME__, \"__CMD__\", \"__ENTRY__\", Duration.parse(\"__WHEN__\"));";
 		if (task.getPeriod() != null) {
 			template += "\ntask__INDEX__.setPeriodic(Duration.parse(\"__PERIOD__\"));";
 		}

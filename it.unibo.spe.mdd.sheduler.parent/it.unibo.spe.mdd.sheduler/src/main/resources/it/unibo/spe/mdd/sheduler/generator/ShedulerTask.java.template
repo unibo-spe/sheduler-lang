@@ -15,7 +15,7 @@ public class ShedulerTask {
     private Duration period;
     private final Duration delay;
 
-    private SheduleTask(String name, String command, String entrypoint, Duration delay) {
+    private ShedulerTask(String name, String command, String entrypoint, Duration delay) {
         this.name = name == null ? "task" + instanceCount++ : name;
         this.command = Objects.requireNonNull(command);
         this.entrypoint = Objects.requireNonNull(entrypoint);

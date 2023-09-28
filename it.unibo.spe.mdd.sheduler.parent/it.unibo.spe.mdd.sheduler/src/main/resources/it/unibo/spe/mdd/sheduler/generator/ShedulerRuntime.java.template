@@ -8,7 +8,7 @@ import java.util.concurrent.*;
 public class ShedulerRuntime implements ScheduledExecutorService {
     private final ScheduledExecutorService delegate;
 
-    public SheduleRuntime(ScheduledExecutorService delegate) {
+    public ShedulerRuntime(ScheduledExecutorService delegate) {
         this.delegate = Objects.requireNonNull(delegate);
     }
 

@@ -6,7 +6,7 @@ import java.util.concurrent.Executors;
 
 public class ShedulerSystem___INPUT__ {
     public static void main(String[] args) {
-        SheduleRuntime runtime = new SheduleRuntime(Executors.newScheduledThreadPool(1));
+        ShedulerRuntime runtime = new ShedulerRuntime(Executors.newScheduledThreadPool(1));
         __TASKS__
     }
 }
