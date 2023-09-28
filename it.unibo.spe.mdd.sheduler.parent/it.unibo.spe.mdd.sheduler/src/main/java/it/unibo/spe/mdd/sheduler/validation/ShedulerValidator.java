@@ -10,6 +10,8 @@ import org.eclipse.xtext.validation.Check;
 import org.eclipse.xtext.validation.CheckType;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * This class contains custom validation rules. 
@@ -24,6 +26,15 @@ public class ShedulerValidator extends AbstractShedulerValidator {
             TimeUtils.toDuration(relativeTime);
         } catch (ArithmeticException e) {
             warning("Relative time is not representable on the JVM", relativeTime, ShedulerPackage.Literals.RELATIVE_TIME__TIME_SPANS, 0);
+        }
+    }
+
+    @Check
+    public void checkAbsoluteTimeIsRepresentable(AbsoluteTime absoluteTime) {
+        try {
+            TimeUtils.toLocalDateTime(absoluteTime);
+        } catch (ArithmeticException e) {
+            warning("Absolute time is not representable on the JVM", absoluteTime, ShedulerPackage.Literals.ABSOLUTE_TIME__DATE, 0);
         }
     }
 
@@ -86,6 +97,32 @@ public class ShedulerValidator extends AbstractShedulerValidator {
                 if (timeSpan.getDuration() >= 24) {
                     error("Duration must be less than 24", timeSpan, ShedulerPackage.Literals.TIME_SPAN__DURATION, 0);
                 }
+            }
+        }
+    }
+
+    @Check(CheckType.FAST)
+    public void ensureTaskNamesAreUniqueWithinPool(TaskPool pool) {
+        Set<String> names = new HashSet<>();
+        for (Task task : pool.getTasks()) {
+            if (task.getName() == null) continue;
+            if (names.contains(task.getName())) {
+                error("Repeated task ID: " + task.getName(), task, ShedulerPackage.Literals.TASK__NAME, 0);
+            } else {
+                names.add(task.getName());
+            }
+        }
+    }
+
+    @Check(CheckType.FAST)
+    public void ensurePoolNamesAreUniqueWithinPool(TaskPoolSet pools) {
+        Set<String> names = new HashSet<>();
+        for (TaskPool pool : pools.getPools()) {
+            if (pool.getName() == null) continue;
+            if (names.contains(pool.getName())) {
+                error("Repeated pool ID: " + pool.getName(), pool, ShedulerPackage.Literals.TASK_POOL__NAME, 0);
+            } else {
+                names.add(pool.getName());
             }
         }
     }
