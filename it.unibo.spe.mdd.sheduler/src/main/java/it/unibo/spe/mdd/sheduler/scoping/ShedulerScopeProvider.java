@@ -25,17 +25,6 @@ public class ShedulerScopeProvider extends AbstractShedulerScopeProvider {
 
     @Override
     public IScope getScope(EObject context, EReference reference) {
-        if (context instanceof Task) {
-            if (Set.of(ShedulerPackage.Literals.TASK__AFTER, ShedulerPackage.Literals.TASK__BEFORE).contains(reference)) {
-                TaskPool pool = EcoreUtil2.getContainerOfType(context, TaskPool.class);
-                return Scopes.scopeFor(
-                        pool.getTasks().stream()
-                                .filter(it -> !context.equals(it))
-                                .filter(it -> it.getName() != null)
-                                .toList()
-                );
-            }
-        }
         return super.getScope(context, reference);
     }
 }
