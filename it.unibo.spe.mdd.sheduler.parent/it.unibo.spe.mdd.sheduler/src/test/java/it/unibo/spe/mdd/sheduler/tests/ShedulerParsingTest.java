@@ -7,6 +7,7 @@ import com.google.inject.Inject;
 import it.unibo.spe.mdd.sheduler.TimeUtils;
 import it.unibo.spe.mdd.sheduler.sheduler.Task;
 import it.unibo.spe.mdd.sheduler.sheduler.TaskPool;
+import it.unibo.spe.mdd.sheduler.sheduler.TaskPoolSet;
 import it.unibo.spe.mdd.sheduler.sheduler.TimeUnit;
 import org.eclipse.xtext.testing.InjectWith;
 import org.eclipse.xtext.testing.extensions.InjectionExtension;
@@ -23,17 +24,19 @@ import static org.junit.jupiter.api.Assertions.*;
 @InjectWith(ShedulerInjectorProvider.class)
 class ShedulerParsingTest extends AbstractTest {
 	@Inject
-	private ParseHelper<TaskPool> parseHelper;
+	private ParseHelper<TaskPoolSet> parseHelper;
 	
 	@Test
 	void loadModel() throws Exception {
 		String text = loadResourceAsStringByName("HelloWorld.shed");
-		TaskPool result = parseHelper.parse(text);
+		TaskPoolSet result = parseHelper.parse(text);
 		Assertions.assertNotNull(result);
 		var errors = result.eResource().getErrors();
 		assertTrue(errors.isEmpty(), "Unexpected errors: " + errors);
-		assertEquals(1, result.getTasks().size());
-		Task task = result.getTasks().get(0);
+		assertEquals(1, result.getPools().size());
+		TaskPool pool = result.getPools().get(0);
+		assertEquals(1, pool.getTasks().size());
+		Task task = pool.getTasks().get(0);
 		assertEquals("greetWorldFrequently", task.getName());
 		assertEquals("echo hello", task.getCommand());
 		assertEquals("/bin/sh -c", task.getEntrypoint());

@@ -2,8 +2,10 @@ grammar it.unibo.spe.mdd.sheduler.Sheduler with org.eclipse.xtext.common.Termina
 
 generate sheduler "http://www.unibo.it/spe/mdd/sheduler/Sheduler"
 
+TaskPoolSet: pools+=TaskPool+;
+
 TaskPool:
-	tasks+=Task+
+	'pool' name=ID? '{' tasks+=Task+ '}' 
 ;
 	
 Task:
@@ -12,7 +14,9 @@ Task:
 		('entry' 'point' entrypoint=STRING)?
 		(
 			'in' relative=RelativeTime |
-			'at' absolute=AbsoluteTime 
+			'at' absolute=AbsoluteTime |
+			'before' before=[Task] |
+			'after' after=[Task] 
 		)
 		('repeat' 'every' period=RelativeTime)?
 	'}'

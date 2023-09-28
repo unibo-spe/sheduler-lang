@@ -6,7 +6,7 @@ package it.unibo.spe.mdd.sheduler.generator;
 import it.unibo.spe.mdd.sheduler.TimeUtils;
 import it.unibo.spe.mdd.sheduler.sheduler.Task;
 import it.unibo.spe.mdd.sheduler.sheduler.TaskPool;
-import org.eclipse.emf.ecore.EObject;
+import it.unibo.spe.mdd.sheduler.sheduler.TaskPoolSet;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.xtext.generator.AbstractGenerator;
 import org.eclipse.xtext.generator.IFileSystemAccess2;
@@ -14,63 +14,30 @@ import org.eclipse.xtext.generator.IGeneratorContext;
 
 import java.io.*;
 import java.util.Map;
-import java.util.Spliterator;
-import java.util.Spliterators;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 /**
  * Generates code from your model files on save.
  * 
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#code-generation
  */
-public class ShedulerGenerator extends AbstractGenerator {
-
-	private Stream<EObject> contentsStream(Resource resource) {
-		return StreamSupport.stream(
-				Spliterators.spliteratorUnknownSize(
-						resource.getAllContents(), Spliterator.ORDERED),
-				false);
-	}
-
+public class ShedulerGenerator extends AbstractShedulerGenerator {
 	@Override
 	public void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-		contentsStream(resource)
-				.filter(it -> it instanceof TaskPool)
-				.map(it -> (TaskPool) it)
-				.forEach(it -> doGenerate(new File(resource.getURI().toFileString()), it, fsa, context));
-	}
-
-	private String javaTemplate(String name, Map<String, String> replacements) throws IOException {
-		InputStream stream = getClass().getResourceAsStream(name + ".java.template");
-		try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream))) {
-			var template = reader.lines().collect(Collectors.joining("\n"));
-			return replace(template, replacements);
-		}
-	}
-
-	private String replace(String template, Map<String, String> replacements) {
-		for (var entry : replacements.entrySet()) {
-			template = template.replace("__" + entry.getKey() + "__", entry.getValue());
-		}
-		return template;
-	}
-
-	private String javaTemplate(String name) throws IOException {
-		return javaTemplate(name, Map.of());
-	}
-
-	private void doGenerate(File inputFile, TaskPool taskPool, IFileSystemAccess2 fsa, IGeneratorContext context) {
+		File inputFile = new File(resource.getURI().toFileString());
+		TaskPoolSet taskPools = (TaskPoolSet) resource.getContents().get(0);
+		String inputFileName = inputFile.getName().split("\\.")[0];
 		try {
-			var runtimeClass = javaTemplate("ShedulerRuntime");
-			var taskClass = javaTemplate("ShedulerTask");
+			var runtimeClass = javaTemplateFile("ShedulerRuntime");
 			fsa.generateFile("ShedulerRuntime.java", runtimeClass);
+
+			var taskClass = javaTemplateFile("ShedulerTask");
 			fsa.generateFile("ShedulerTask.java", taskClass);
-			var inputFileName = inputFile.getName().split("\\.")[0];
-			var systemClass = javaTemplate("ShedulerSystem", Map.of(
+
+			var systemClass = javaTemplateFile("ShedulerSystem", Map.of(
 					"INPUT", inputFileName,
-					"TASKS", generateTasks(taskPool)
+					"TASK_POOLS_CALLS", generateTaskPoolsCalls(taskPools),
+					"TASK_POOLS_DEFS", generateTaskPoolsDefinitions(taskPools)
 			));
 			fsa.generateFile("ShedulerSystem_" + inputFileName + ".java", systemClass);
 		} catch (IOException e) {
@@ -78,7 +45,34 @@ public class ShedulerGenerator extends AbstractGenerator {
 		}
 	}
 
-	private String generateTasks(TaskPool taskPool) {
+	private String generateTaskPoolMethodName(TaskPool taskPool, int index) {
+		return "pool_" + (taskPool.getName() == null ? Integer.toString(index) : taskPool.getName());
+	}
+
+	private String generateTaskPoolsDefinitions(TaskPoolSet taskPools) throws IOException {
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < taskPools.getPools().size(); i++) {
+			TaskPool pool = taskPools.getPools().get(i);
+			sb.append(javaTemplateFile("taskPool", Map.of(
+					"ID", generateTaskPoolMethodName(pool, i),
+					"TASKS", generateTaskPool(pool)
+			)));
+			sb.append("\n");
+		}
+		return sb.toString();
+	}
+	
+	private String generateTaskPoolsCalls(TaskPoolSet taskPools) {
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < taskPools.getPools().size(); i++) {
+			TaskPool pool = taskPools.getPools().get(i);
+			sb.append(generateTaskPoolMethodName(pool, i) + "(runtime);");
+			sb.append("\n");
+		}
+		return sb.toString();
+	}
+	
+	private String generateTaskPool(TaskPool taskPool) {
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < taskPool.getTasks().size(); i++) {
 			sb.append(generateTask(i, taskPool.getTasks().get(i)));
@@ -140,6 +134,4 @@ public class ShedulerGenerator extends AbstractGenerator {
 				)
 		);
 	}
-
-
 }
