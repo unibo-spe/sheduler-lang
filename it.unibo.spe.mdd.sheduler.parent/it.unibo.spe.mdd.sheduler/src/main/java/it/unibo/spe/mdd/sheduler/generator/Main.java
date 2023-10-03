@@ -7,6 +7,8 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Provider;
 import it.unibo.spe.mdd.sheduler.ShedulerStandaloneSetup;
+
+import java.io.File;
 import java.util.List;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
@@ -58,7 +60,7 @@ public class Main {
 		}
 
 		// Configure and start the generator
-		fileAccess.setOutputPath("src-gen/");
+		fileAccess.setOutputPath(new File(string).getParent());
 		GeneratorContext context = new GeneratorContext();
 		context.setCancelIndicator(CancelIndicator.NullImpl);
 		generator.generate(resource, fileAccess, context);

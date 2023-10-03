@@ -107,7 +107,7 @@ public class ShedulerGenerator extends AbstractShedulerGenerator {
 						"NAME", task.getName() == null ? "null" : "\"" + task.getName() + "\"",
 						"CMD", task.getCommand(),
 						"ENTRY", task.getEntrypoint(),
-						"WHEN", TimeUtils.toDuration(task.getRelative()).toString(),
+						"WHEN", TimeUtils.toLocalDateTime(task.getAbsolute()).toString(),
 						"PERIOD", task.getPeriod() == null ? "" : TimeUtils.toDuration(task.getPeriod()).toString()
 				)
 		);
