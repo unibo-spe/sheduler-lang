@@ -9,7 +9,7 @@ buildscript {
 }
 
 subprojects {
-	ext.xtextVersion = '2.32.0'
+	ext.xtextVersion = '2.36.0'
 	repositories {
 		mavenCentral()
 	}
@@ -27,8 +27,8 @@ subprojects {
 	version = '1.0.0-SNAPSHOT'
 
 	java {
-		sourceCompatibility = JavaVersion.VERSION_17
-		targetCompatibility = JavaVersion.VERSION_17
+		sourceCompatibility = JavaVersion.VERSION_21
+		targetCompatibility = JavaVersion.VERSION_21
 	}
 
 	configurations.all {

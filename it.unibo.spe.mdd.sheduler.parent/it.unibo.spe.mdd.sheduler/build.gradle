@@ -1,5 +1,5 @@
 plugins {
-	id 'com.github.johnrengelman.shadow' version '8.1.1'
+	id 'com.gradleup.shadow' version '8.3.3'
 	id 'application'
 }
 
@@ -27,7 +27,6 @@ dependencies {
 }
 
 task generateXtextLanguage(type: JavaExec) {
-	group = "Xtext"
 	mainClass = 'org.eclipse.emf.mwe2.launch.runtime.Mwe2Launcher'
 	classpath = configurations.mwe2
 	inputs.file "src/main/java/it/unibo/spe/mdd/sheduler/GenerateSheduler.mwe2"
