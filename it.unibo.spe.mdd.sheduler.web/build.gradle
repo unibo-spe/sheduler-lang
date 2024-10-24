@@ -1,6 +1,7 @@
 plugins {
 	id 'war'
 }
+
 dependencies {
 	api project(':it.unibo.spe.mdd.sheduler')
 	api project(':it.unibo.spe.mdd.sheduler.ide')
@@ -13,6 +14,7 @@ dependencies {
 	providedCompile "org.eclipse.jetty:jetty-annotations:11.0.23"
 	providedCompile "org.slf4j:slf4j-simple:2.0.5"
 }
+
 task jettyRun(type:JavaExec) {
 	dependsOn(sourceSets.main.runtimeClasspath)
 	classpath = sourceSets.main.runtimeClasspath.filter{it.exists()}

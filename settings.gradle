@@ -1,3 +1,5 @@
+rootProject.name = 'it.unibo.spe.mdd.sheduler.parent'
+
 include 'it.unibo.spe.mdd.sheduler'
 include 'it.unibo.spe.mdd.sheduler.ide'
 include 'it.unibo.spe.mdd.sheduler.web'
