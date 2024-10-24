@@ -10,6 +10,7 @@ dependencies {
 
 apply plugin: 'application'
 apply plugin: 'com.github.johnrengelman.shadow'
+
 application {
 	mainClass = "org.eclipse.xtext.ide.server.ServerLauncher"
 }

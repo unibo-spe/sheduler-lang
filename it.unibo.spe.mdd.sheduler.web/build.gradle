@@ -17,7 +17,7 @@ dependencies {
 
 task jettyRun(type:JavaExec) {
 	dependsOn(sourceSets.main.runtimeClasspath)
-	classpath = sourceSets.main.runtimeClasspath.filter{it.exists()}
+	classpath = sourceSets.main.runtimeClasspath.filter { it.exists() }
 	mainClass = 'it.unibo.spe.mdd.sheduler.web.ServerLauncher'
 	standardInput = System.in
 	group = 'run'
