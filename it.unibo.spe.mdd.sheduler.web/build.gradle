@@ -9,7 +9,7 @@ dependencies {
 	api "org.eclipse.xtext:org.eclipse.xtext.web.servlet:${xtextVersion}"
 	api "org.eclipse.xtend:org.eclipse.xtend.lib:${xtextVersion}"
 	api "org.webjars:requirejs:2.3.7"
-	api "org.webjars:jquery:3.6.4"
+	api "org.webjars:jquery:3.7.1"
 	api "org.webjars:ace:1.23.4"
 	providedCompile "org.eclipse.jetty:jetty-annotations:11.0.24"
 	providedCompile "org.slf4j:slf4j-simple:2.0.16"
