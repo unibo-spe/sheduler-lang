@@ -9,7 +9,7 @@ buildscript {
 }
 
 subprojects {
-	ext.xtextVersion = '2.36.0'
+	ext.xtextVersion = '2.37.0'
 	repositories {
 		mavenCentral()
 	}
