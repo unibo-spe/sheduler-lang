@@ -11,7 +11,7 @@ dependencies {
 	api "org.webjars:requirejs:2.3.7"
 	api "org.webjars:jquery:3.7.1"
 	api "org.webjars:ace:07.31.2013"
-	providedCompile "org.eclipse.jetty:jetty-annotations:11.0.26"
+	providedCompile "org.eclipse.jetty:jetty-annotations:12.1.1"
 	providedCompile "org.slf4j:slf4j-simple:2.0.17"
 }
 
