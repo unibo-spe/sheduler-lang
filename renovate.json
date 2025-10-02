@@ -3,5 +3,13 @@
   "extends": [
     "github>DanySK/renovate-config"
   ],
-  "assignees": [ "gciatto" ]
+  "assignees": [ "gciatto" ],
+  "packageRules": [
+    {
+      "enabled": false,
+      "matchPackageNames": [
+        "/^org\\.webjars:/"
+      ]
+    }
+  ]
 }
