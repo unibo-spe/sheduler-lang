@@ -78,9 +78,21 @@ public class ShedulerGenerator extends AbstractShedulerGenerator {
 		for (int i = 0; i < tasks.size(); i++) {
 			sb.append(generateTask(i, tasks.get(i))).append("\n");
 		}
-		// 2. schedule them
+		// 2. wire dependencies (before/after are pool-local, cf. ShedulerScopeProvider)
 		for (int i = 0; i < tasks.size(); i++) {
-			sb.append("runtime.schedule(task").append(i).append(");\n");
+			Task task = tasks.get(i);
+			if (task.getAfter() != null) {
+				sb.append("task").append(tasks.indexOf(task.getAfter())).append(".addSuccessor(task").append(i).append(");\n");
+			} else if (task.getBefore() != null) {
+				sb.append("task").append(tasks.indexOf(task.getBefore())).append(".addPredecessor(task").append(i).append(");\n");
+			}
+		}
+		// 3. schedule anchors only (dependent tasks are triggered by their anchors)
+		for (int i = 0; i < tasks.size(); i++) {
+			Task task = tasks.get(i);
+			if (task.getBefore() == null && task.getAfter() == null) {
+				sb.append("runtime.schedule(task").append(i).append(");\n");
+			}
 		}
 		return sb.toString();
 	}
@@ -93,7 +105,7 @@ public class ShedulerGenerator extends AbstractShedulerGenerator {
 		} else if (task.getAbsolute() != null) {
 			factory = "at(" + args + ", LocalDateTime.parse(" + javaString(TimeUtils.toLocalDateTime(task.getAbsolute()).toString()) + "))";
 		} else {
-			throw new UnsupportedOperationException("before/after tasks are not supported yet"); // replaced in Ex 5
+			factory = "dependent(" + args + ")";
 		}
 		String code = "ShedulerTask task" + i + " = ShedulerTask." + factory + ";";
 		if (task.getPeriod() != null) {

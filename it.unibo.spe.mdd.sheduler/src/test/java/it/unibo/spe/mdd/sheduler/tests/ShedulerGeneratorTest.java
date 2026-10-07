@@ -36,6 +36,8 @@ class ShedulerGeneratorTest {
 			pool p {
 			  schedule task periodic { command "echo \\"quoted\\" \\\\ back" entry point "/bin/sh -c" in 5 minutes repeat every 48 hours }
 			  schedule task absolute { command "echo abs" at 2099/01/01 10:00 }
+			  schedule task first { command "echo first" before periodic }
+			  schedule task last { command "echo last" after periodic }
 			}
 			""";
 
@@ -78,6 +80,11 @@ class ShedulerGeneratorTest {
 		assertTrue(system.contains("task0.setPeriod(Duration.parse(\"PT48H\"))"), system);
 		assertTrue(system.contains("runtime.schedule(task0)"), system);
 		assertTrue(system.contains("runtime.schedule(task1)"), system);
+		assertTrue(system.contains("ShedulerTask.dependent(\"first\""), system);
+		assertTrue(system.contains("task0.addPredecessor(task2)"), system);
+		assertTrue(system.contains("task0.addSuccessor(task3)"), system);
+		assertFalse(system.contains("runtime.schedule(task2)"), system);
+		assertFalse(system.contains("runtime.schedule(task3)"), system);
 
 		List<String> args = new ArrayList<>(List.of("-d", tempDir.resolve("out").toString()));
 		args.addAll(paths);
