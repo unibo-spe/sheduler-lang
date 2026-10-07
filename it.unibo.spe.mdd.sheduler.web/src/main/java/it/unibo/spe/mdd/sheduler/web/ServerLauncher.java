@@ -24,8 +24,8 @@ public class ServerLauncher {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(ServerLauncher.class);
 	
-	public static void main(String[] args) {
-		Server server = new Server(new InetSocketAddress("localhost", 8080));
+	public static Server createServer(InetSocketAddress address) {
+		Server server = new Server(address);
 		WebAppContext ctx = new WebAppContext();
 		ctx.setResourceBase(new File("src/main/webapp").getAbsolutePath());
 		ctx.setWelcomeFiles(new String[] {"index.html"});
@@ -41,6 +41,11 @@ public class ServerLauncher {
 			".*/it\\.unibo\\.spe\\.mdd\\.sheduler\\.web/.*,.*\\.jar");
 		ctx.setInitParameter("org.eclipse.jetty.servlet.Default.useFileMappedBuffer", "false");
 		server.setHandler(ctx);
+		return server;
+	}
+
+	public static void main(String[] args) {
+		Server server = createServer(new InetSocketAddress("localhost", 8080));
 		try {
 			server.start();
 			LOG.info("Server started " + server.getURI() + "...");

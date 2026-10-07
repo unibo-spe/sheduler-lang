@@ -23,3 +23,13 @@ task jettyRun(type:JavaExec) {
 	group = 'run'
 	description = 'Starts an example Jetty server with your language'
 }
+
+dependencies {
+	testImplementation 'org.junit.jupiter:junit-jupiter-api'
+	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+	useJUnitPlatform()
+}
