@@ -45,6 +45,14 @@ test {
 	useJUnitPlatform()
 }
 
+tasks.register('runInterpreter', JavaExec) {
+	group = 'application'
+	description = 'Runs the Sheduler interpreter: ./gradlew runInterpreter --args=/absolute/path/to/file.shed'
+	classpath = sourceSets.main.runtimeClasspath
+	mainClass = 'it.unibo.spe.mdd.sheduler.interpreter.ShedulerInterpreter'
+	standardInput = System.in
+}
+
 processResources.dependsOn(generateXtextLanguage)
 generateXtext.dependsOn(generateXtextLanguage)
 clean.dependsOn(cleanGenerateXtextLanguage)
