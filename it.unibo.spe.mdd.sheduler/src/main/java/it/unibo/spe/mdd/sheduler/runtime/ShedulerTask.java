@@ -15,8 +15,10 @@ public class ShedulerTask {
     private final String name;
     private final String command;
     private final String entrypoint;
-    private final Duration delay;
+    private final Duration delay; // null iff dependent
     private Duration period;
+    private final List<ShedulerTask> predecessors = new ArrayList<>();
+    private final List<ShedulerTask> successors = new ArrayList<>();
 
     private ShedulerTask(String name, String command, String entrypoint, Duration delay) {
         this.name = name == null ? "task" + instanceCount++ : name;
@@ -41,13 +43,29 @@ public class ShedulerTask {
         return at(null, command, entrypoint, dateTime);
     }
 
+    public static ShedulerTask dependent(String name, String command, String entrypoint) {
+        return new ShedulerTask(name, command, entrypoint, null);
+    }
+
     public String getName() { return name; }
     public String getCommand() { return command; }
     public String getEntrypoint() { return entrypoint; }
     public Duration getPeriod() { return period; }
     public boolean isPeriodic() { return period != null; }
     public ShedulerTask setPeriod(Duration period) { this.period = period; return this; }
-    public Duration getDelay() { return delay; }
+    public Duration getDelay() { return delay; } // null for dependent tasks
+
+    public boolean isDependent() { return delay == null; }
+
+    public ShedulerTask addPredecessor(ShedulerTask task) {
+        predecessors.add(Objects.requireNonNull(task));
+        return this;
+    }
+
+    public ShedulerTask addSuccessor(ShedulerTask task) {
+        successors.add(Objects.requireNonNull(task));
+        return this;
+    }
 
     public Process executeAsync() throws IOException {
         List<String> cmd = new ArrayList<>(List.of(entrypoint.trim().split("\\s+")));
@@ -55,12 +73,20 @@ public class ShedulerTask {
         return new ProcessBuilder(cmd).inheritIO().start();
     }
 
+    void runChain() throws IOException, InterruptedException {
+        for (ShedulerTask p : predecessors) p.runChain();
+        executeAsync().waitFor();
+        for (ShedulerTask s : successors) s.runChain();
+    }
+
     public Runnable asRunnable() {
         return () -> {
             try {
-                executeAsync();
+                runChain();
             } catch (IOException e) {
                 e.printStackTrace();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
         };
     }

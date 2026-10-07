@@ -12,6 +12,9 @@ public class ShedulerRuntime {
     }
 
     public void schedule(ShedulerTask task) {
+        if (task.isDependent()) {
+            throw new IllegalArgumentException("Task " + task.getName() + " is dependent: it is triggered by its anchor task");
+        }
         if (task.isPeriodic()) {
             delegate.scheduleAtFixedRate(task.asRunnable(), task.getDelay().toMillis(), task.getPeriod().toMillis(), TimeUnit.MILLISECONDS);
         } else {
