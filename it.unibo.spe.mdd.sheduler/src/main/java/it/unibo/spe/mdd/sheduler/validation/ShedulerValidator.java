@@ -130,4 +130,22 @@ public class ShedulerValidator extends AbstractShedulerValidator {
             // reported by checkRelativeTimeIsRepresentable
         }
     }
+
+    @Check
+    public void ensureNoDependencyCycles(Task task) {
+        Set<Task> visited = new HashSet<>();
+        for (Task current = task; current != null; current = anchorOf(current)) {
+            if (!visited.add(current)) {
+                if (current == task) {
+                    error("Cyclic dependency: task never reaches a timed task", task,
+                          task.getBefore() != null ? ShedulerPackage.Literals.TASK__BEFORE : ShedulerPackage.Literals.TASK__AFTER);
+                }
+                return;
+            }
+        }
+    }
+
+    private static Task anchorOf(Task task) {
+        return task.getBefore() != null ? task.getBefore() : task.getAfter();
+    }
 }
