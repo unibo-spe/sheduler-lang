@@ -11,6 +11,7 @@ import org.eclipse.xtext.testing.InjectWith;
 import org.eclipse.xtext.testing.extensions.InjectionExtension;
 import org.eclipse.xtext.testing.util.ParseHelper;
 import org.eclipse.xtext.testing.validation.ValidationTestHelper;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -35,6 +36,7 @@ class ShedulerScopingTest {
         return "schedule task " + name + " { command \"c\" in 1 s } ";
     }
 
+    @Disabled("TODO Ex 2: remove this line once done")
     @Test
     void scopeContainsOnlyNamedSiblingTasks() throws Exception {
         TaskPoolSet model = parseHelper.parse("pool p { " + t("a") + "schedule { command \"anon\" in 1 s } "
@@ -47,12 +49,14 @@ class ShedulerScopingTest {
         assertEquals(List.of("a"), names);
     }
 
+    @Disabled("TODO Ex 2: remove this line once done")
     @Test
     void crossPoolReferenceFails() throws Exception {
         TaskPoolSet model = parseHelper.parse("pool p { " + t("x") + "} pool q { schedule task other { command \"c\" after x } }");
         helper.assertError(model, ShedulerPackage.Literals.TASK, Diagnostic.LINKING_DIAGNOSTIC);
     }
 
+    @Disabled("TODO Ex 2: remove this line once done")
     @Test
     void selfReferenceFails() throws Exception {
         TaskPoolSet model = parseHelper.parse("pool { " + t("a") + "schedule task x { command \"c\" after x } }");

@@ -3,8 +3,8 @@
 An [Xtext](https://eclipse.dev/Xtext/) DSL for scheduling shell commands, used as the running example of the
 _Model-Driven Development_ lecture of the Software Process Engineering course.
 
-> **This is the `master` branch, which contains the solutions.**
-> If you want to do the exercises yourself, check out the [`exercises`](https://github.com/unibo-spe/sheduler-lang/tree/exercises) branch.
+> **This is the `exercises` branch: the code contains placeholders for you to fill in.**
+> Solutions are on the [`master`](https://github.com/unibo-spe/sheduler-lang/tree/master) branch (and in the slides).
 
 Slides: <https://unibo-spe.github.io/11-mdd/>
 
@@ -25,6 +25,15 @@ pool myPool {
 | 4   | Interpreter scheduling tasks directly from the model | `interpreter/ShedulerInterpreter.java` |
 | 5   | Task dependencies (`before`/`after`) in runtime, generator, interpreter, plus no cyclic dependencies | `runtime/`, plus the files above |
 
+## Working on the exercises
+
+1. Look for `TODO Ex N.M` comments (most IDEs list them in a _TODO_ view): they break each exercise into small steps.
+   Unimplemented methods throw `UnsupportedOperationException("TODO Ex N.M: ...")`.
+2. Each exercise has tests in `it.unibo.spe.mdd.sheduler/src/test/java`, marked `@Disabled("TODO Ex N.M ...")`:
+   remove the annotation once you are done, and run `./gradlew build`.
+3. Ex 5 changes `runtime/ShedulerTask.java` and `runtime/ShedulerRuntime.java`: copy them over their `.java.template`
+   counterparts in `src/main/resources` too (`RuntimeTemplatesSyncTest` checks that).
+
 ## How to operate
 
 Requires a JDK; Gradle provisions Java 21 automatically. Import the repository root as a Gradle project
@@ -38,5 +47,3 @@ in [Eclipse for DSL developers](https://eclipse.dev/Xtext/download.html) (full X
 | `./gradlew :it.unibo.spe.mdd.sheduler:runInterpreter --args=/abs/path/file.shed` | Runs `file.shed` directly (stop with Ctrl+C) |
 | `./gradlew shadowJar` | Packs the command-line compiler (`*-compiler.jar`) and the LSP server (`*-ls.jar`) |
 
-Tests (`it.unibo.spe.mdd.sheduler/src/test/java`) cover parsing, validation, scoping, generation (the generated code is
-compiled) and the runtime.

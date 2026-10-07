@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
  * on a pool of background threads.
  * <p>
  * NOTE: a copy of this file is shipped to generated projects via {@code ShedulerRuntime.java.template}
- * (see {@code RuntimeTemplatesSyncTest}): if you edit this class, copy it over the template too.
+ * (see {@code RuntimeTemplatesSyncTest}): if you edit this class (Ex 5), copy it over the template too.
  */
 public class ShedulerRuntime {
     private final ScheduledExecutorService delegate;
@@ -19,10 +19,8 @@ public class ShedulerRuntime {
     }
 
     public void schedule(ShedulerTask task) {
-        // dependent tasks have no delay of their own: they are run by their anchor (see ShedulerTask.runChain)
-        if (task.isDependent()) {
-            throw new IllegalArgumentException("Task " + task.getName() + " is dependent: it is triggered by its anchor task");
-        }
+        // TODO Ex 5.9: dependent tasks have no delay of their own, as they are run by their anchor task:
+        //              throw an IllegalArgumentException if someone tries to schedule them
         // executors work with a numeric amount + a time unit, so durations are converted into milliseconds
         // (this is why the validator warns about durations that overflow toMillis(), and forbids periods < 1 ms)
         if (task.isPeriodic()) {

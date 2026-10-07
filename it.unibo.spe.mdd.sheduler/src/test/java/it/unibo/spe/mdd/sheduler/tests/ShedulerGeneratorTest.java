@@ -16,6 +16,7 @@ import org.eclipse.xtext.testing.InjectWith;
 import org.eclipse.xtext.testing.extensions.InjectionExtension;
 import org.eclipse.xtext.testing.util.ParseHelper;
 import org.eclipse.xtext.testing.validation.ValidationTestHelper;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
@@ -57,6 +58,7 @@ class ShedulerGeneratorTest {
 	@TempDir
 	Path tempDir;
 
+	@Disabled("TODO Ex 3: remove this line once done")
 	@Test
 	void timedTasks() throws Exception {
 		String system = generateAndCompile("pool p {\n" + TIMED_TASKS + "}");
@@ -66,6 +68,7 @@ class ShedulerGeneratorTest {
 		assertTrue(system.contains("runtime.schedule(task1)"), system);
 	}
 
+	@Disabled("TODO Ex 5.10-5.12: remove this line once done")
 	@Test
 	void dependentTasks() throws Exception {
 		String system = generateAndCompile("pool p {\n" + TIMED_TASKS + DEPENDENT_TASKS + "}");

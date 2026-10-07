@@ -25,19 +25,15 @@ public class ShedulerScopeProvider extends AbstractShedulerScopeProvider {
 
     @Override
     public IScope getScope(EObject context, EReference reference) {
-        // Ex 2: the scope is the set of candidates a cross-reference may point to (and what content assist proposes).
-        // For `before x` / `after x`, candidates are the named tasks of the same pool, except the task itself.
-        if (context instanceof Task) {
-            if (Set.of(ShedulerPackage.Literals.TASK__AFTER, ShedulerPackage.Literals.TASK__BEFORE).contains(reference)) {
-                TaskPool pool = EcoreUtil2.getContainerOfType(context, TaskPool.class);
-                return Scopes.scopeFor(
-                        pool.getTasks().stream()
-                                .filter(it -> !context.equals(it))
-                                .filter(it -> it.getName() != null)
-                                .toList()
-                );
-            }
-        }
+        // A scope is the set of candidates a cross-reference may point to (and what content assist proposes).
+        // Tests: ShedulerScopingTest (remove @Disabled once done).
+        // TODO Ex 2a: only handle the case where context is a Task, and reference is
+        //             ShedulerPackage.Literals.TASK__AFTER or ShedulerPackage.Literals.TASK__BEFORE
+        // TODO Ex 2b: find the TaskPool containing the task (hint: EcoreUtil2.getContainerOfType)
+        // TODO Ex 2c: candidates are the tasks of that pool, except anonymous ones (getName() == null)...
+        // TODO Ex 2d: ...and except the task itself (a task cannot be scheduled before/after itself)
+        // TODO Ex 2e: wrap the candidates into an IScope via Scopes.scopeFor(...), and return it
+        // otherwise, fall back to the default scoping:
         return super.getScope(context, reference);
     }
 }

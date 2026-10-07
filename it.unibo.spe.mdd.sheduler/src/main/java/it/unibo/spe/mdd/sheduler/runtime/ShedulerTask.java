@@ -10,19 +10,13 @@ import java.util.Objects;
 /**
  * A shell command to be executed at some point in time, possibly periodically.
  * <p>
- * This class is the run-time counterpart of the {@code Task} model element: the generator emits code that builds
- * {@code ShedulerTask}s, while the interpreter builds them directly from the parsed model.
+ * This class is the run-time counterpart of the {@code Task} model element: the generator (Ex 3) emits code that
+ * builds {@code ShedulerTask}s, while the interpreter (Ex 4) builds them directly from the parsed model.
  * <p>
  * NOTE: a copy of this file is shipped to generated projects via {@code ShedulerTask.java.template}
- * (see {@code RuntimeTemplatesSyncTest}): if you edit this class, copy it over the template too.
+ * (see {@code RuntimeTemplatesSyncTest}): if you edit this class (Ex 5), copy it over the template too.
  * <p>
- * A task is either:
- * <ul>
- *     <li><em>timed</em>: it has a {@link #getDelay() delay} (and maybe a {@link #getPeriod() period}),
- *     and is meant to be passed to {@link ShedulerRuntime#schedule(ShedulerTask)};</li>
- *     <li><em>dependent</em> (Ex 5): it has no delay, and runs right before/after some other task (its <em>anchor</em>),
- *     which it is attached to via {@link #addPredecessor(ShedulerTask)} / {@link #addSuccessor(ShedulerTask)}.</li>
- * </ul>
+ * Tests: {@code ShedulerRuntimeTest} (remove {@code @Disabled} once Ex 5 is done).
  */
 public class ShedulerTask {
     /** Used when the DSL omits {@code entry point "..."}: the command is interpreted by the POSIX shell. */
@@ -33,10 +27,9 @@ public class ShedulerTask {
     private final String name;
     private final String command;
     private final String entrypoint;
-    private final Duration delay; // null iff dependent
+    private final Duration delay;
     private Duration period;
-    private final List<ShedulerTask> predecessors = new ArrayList<>(); // tasks to run right BEFORE this one
-    private final List<ShedulerTask> successors = new ArrayList<>();   // tasks to run right AFTER this one
+    // TODO Ex 5.1: a task must know which tasks to run right before it (predecessors) and right after it (successors)
 
     // private constructor: tasks are created via the static factory methods below, whose names mirror the DSL keywords
     private ShedulerTask(String name, String command, String entrypoint, Duration delay) {
@@ -67,9 +60,10 @@ public class ShedulerTask {
         return at(null, command, entrypoint, dateTime);
     }
 
-    /** DSL: {@code schedule task name { ... before <task> }} or {@code ... after <task> } (Ex 5). */
+    /** DSL: {@code schedule task name { ... before <task> }} or {@code ... after <task> }. */
     public static ShedulerTask dependent(String name, String command, String entrypoint) {
-        return new ShedulerTask(name, command, entrypoint, null);
+        // TODO Ex 5.2: a dependent task has no timing of its own (e.g. no delay, i.e. delay == null)
+        throw new UnsupportedOperationException("TODO Ex 5.2: create a task with no delay");
     }
 
     public String getName() { return name; }
@@ -78,20 +72,20 @@ public class ShedulerTask {
     public Duration getPeriod() { return period; }
     public boolean isPeriodic() { return period != null; }
     public ShedulerTask setPeriod(Duration period) { this.period = period; return this; }
-    public Duration getDelay() { return delay; } // null for dependent tasks
+    public Duration getDelay() { return delay; }
 
-    public boolean isDependent() { return delay == null; }
+    public boolean isDependent() {
+        return false; // TODO Ex 5.3: true iff this task was created via dependent(...)
+    }
 
     /** {@code task} will run right before {@code this} one (DSL: {@code task before this}). */
     public ShedulerTask addPredecessor(ShedulerTask task) {
-        predecessors.add(Objects.requireNonNull(task));
-        return this;
+        throw new UnsupportedOperationException("TODO Ex 5.4: remember task as a predecessor of this one");
     }
 
     /** {@code task} will run right after {@code this} one (DSL: {@code task after this}). */
     public ShedulerTask addSuccessor(ShedulerTask task) {
-        successors.add(Objects.requireNonNull(task));
-        return this;
+        throw new UnsupportedOperationException("TODO Ex 5.5: remember task as a successor of this one");
     }
 
     /**
@@ -106,25 +100,16 @@ public class ShedulerTask {
         return new ProcessBuilder(cmd).inheritIO().start();
     }
 
-    /**
-     * Runs all predecessors, then this task, then all successors, each one waiting for the previous one to terminate.
-     * The recursion takes care of dependents of dependents (e.g. {@code c after b}, {@code b after a}).
-     */
-    void runChain() throws IOException, InterruptedException {
-        for (ShedulerTask p : predecessors) p.runChain();
-        executeAsync().waitFor();
-        for (ShedulerTask s : successors) s.runChain();
-    }
-
     /** Adapts this task to what {@link java.util.concurrent.ScheduledExecutorService} expects: a {@link Runnable}. */
     public Runnable asRunnable() {
+        // TODO Ex 5.6: run all predecessors first, then this task, then all successors, in this order
+        // TODO Ex 5.7: "in this order" means each process must terminate before the next one starts (Process.waitFor())
+        // TODO Ex 5.8: predecessors/successors may have predecessors/successors of their own (hint: recursion)
         return () -> {
             try {
-                runChain();
+                executeAsync();
             } catch (IOException e) {
                 e.printStackTrace();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt(); // the executor is shutting down: restore the flag and stop
             }
         };
     }

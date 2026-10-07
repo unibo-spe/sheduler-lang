@@ -2,6 +2,7 @@ package it.unibo.spe.mdd.sheduler.tests;
 
 import it.unibo.spe.mdd.sheduler.runtime.ShedulerRuntime;
 import it.unibo.spe.mdd.sheduler.runtime.ShedulerTask;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -22,6 +23,7 @@ class ShedulerRuntimeTest {
     @TempDir
     Path tempDir;
 
+    @Disabled("TODO Ex 5.2-5.3 and 5.9: remove this line once done")
     @Test
     void scheduleRejectsDependentTasks() {
         ScheduledExecutorService ex = Executors.newSingleThreadScheduledExecutor();
@@ -32,6 +34,7 @@ class ShedulerRuntimeTest {
         }
     }
 
+    @Disabled("TODO Ex 5.1-5.8: remove this line once done")
     @Test
     void dependenciesRunInOrder() throws Exception {
         assumeFalse(System.getProperty("os.name").toLowerCase().contains("win"));

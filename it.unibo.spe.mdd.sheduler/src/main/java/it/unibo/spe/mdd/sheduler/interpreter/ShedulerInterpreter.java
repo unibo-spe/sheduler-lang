@@ -19,16 +19,16 @@ import org.eclipse.xtext.validation.CheckMode;
 import org.eclipse.xtext.validation.IResourceValidator;
 import org.eclipse.xtext.validation.Issue;
 
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Executors;
 
 /**
  * Alternative to code generation: rather than producing Java code which builds {@link ShedulerTask}s,
  * the interpreter builds them directly from the parsed model, and schedules them right away.
  * <p>
- * Usage: {@code ./gradlew runInterpreter --args=/absolute/path/to/file.shed}
+ * Usage: {@code ./gradlew :it.unibo.spe.mdd.sheduler:runInterpreter --args=/absolute/path/to/file.shed}
+ * <p>
+ * Everything is already in place, except {@link #toShedulerTask(Task)} (Ex 4) and the support for dependencies (Ex 5).
  */
 public class ShedulerInterpreter {
     public static void main(String[] args) {
@@ -62,43 +62,24 @@ public class ShedulerInterpreter {
         TaskPoolSet taskPools = (TaskPoolSet) resource.getContents().get(0);
         ShedulerRuntime runtime = new ShedulerRuntime(Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors()));
         for (TaskPool pool : taskPools.getPools()) {
-            Map<Task, ShedulerTask> tasks = new LinkedHashMap<>(); // EObjects use identity equality
-            // first pass: create all tasks, so that the second pass can find every anchor in the map
+            // TODO Ex 5.13: dependent tasks need their anchor's ShedulerTask: first convert all tasks of the pool
+            //               (hint: a LinkedHashMap<Task, ShedulerTask> keeps the order, and EObjects use identity equality)
+            // TODO Ex 5.14: then attach each dependent task to its anchor (`x after y` -> y.addSuccessor(x),
+            //               `x before y` -> y.addPredecessor(x))
+            // TODO Ex 5.15: finally, schedule non-dependent tasks only
             for (Task task : pool.getTasks()) {
-                tasks.put(task, toShedulerTask(task));
-            }
-            // second pass: attach each dependent task to its anchor (same semantics as in the generator)
-            for (Map.Entry<Task, ShedulerTask> entry : tasks.entrySet()) {
-                Task task = entry.getKey();
-                if (task.getAfter() != null) {
-                    tasks.get(task.getAfter()).addSuccessor(entry.getValue());
-                } else if (task.getBefore() != null) {
-                    tasks.get(task.getBefore()).addPredecessor(entry.getValue());
-                }
-            }
-            // third pass: schedule timed tasks only, dependent ones will be run by their anchors
-            for (ShedulerTask t : tasks.values()) {
-                if (!t.isDependent()) {
-                    runtime.schedule(t);
-                }
+                runtime.schedule(toShedulerTask(task));
             }
         }
         // executor threads are non-daemon: the JVM stays alive until killed (Ctrl+C)
     }
 
-    // the same case analysis as ShedulerGenerator.generateTask, but producing objects instead of code
+    // TODO Ex 4.1: `in <relative time>` -> ShedulerTask.in(...), hint: TimeUtils.toDuration
+    // TODO Ex 4.2: `at <absolute time>` -> ShedulerTask.at(...), hint: TimeUtils.toLocalDateTime
+    // TODO Ex 4.3: `repeat every <relative time>` -> setPeriod(...)
+    // TODO Ex 4.4: name and entry point may be null: ShedulerTask already handles that
+    // TODO Ex 5.16: `before`/`after` -> ShedulerTask.dependent(...)
     static ShedulerTask toShedulerTask(Task task) {
-        ShedulerTask result;
-        if (task.getRelative() != null) {
-            result = ShedulerTask.in(task.getName(), task.getCommand(), task.getEntrypoint(), TimeUtils.toDuration(task.getRelative()));
-        } else if (task.getAbsolute() != null) {
-            result = ShedulerTask.at(task.getName(), task.getCommand(), task.getEntrypoint(), TimeUtils.toLocalDateTime(task.getAbsolute()));
-        } else {
-            result = ShedulerTask.dependent(task.getName(), task.getCommand(), task.getEntrypoint());
-        }
-        if (task.getPeriod() != null) {
-            result.setPeriod(TimeUtils.toDuration(task.getPeriod()));
-        }
-        return result;
+        throw new UnsupportedOperationException("TODO Ex 4.1: convert a Task (model) into a ShedulerTask (runtime)");
     }
 }
