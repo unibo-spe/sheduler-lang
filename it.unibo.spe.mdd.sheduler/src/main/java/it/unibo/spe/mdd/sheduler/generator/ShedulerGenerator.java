@@ -8,13 +8,12 @@ import it.unibo.spe.mdd.sheduler.sheduler.Task;
 import it.unibo.spe.mdd.sheduler.sheduler.TaskPool;
 import it.unibo.spe.mdd.sheduler.sheduler.TaskPoolSet;
 import org.eclipse.emf.ecore.resource.Resource;
-import org.eclipse.xtext.generator.AbstractGenerator;
 import org.eclipse.xtext.generator.IFileSystemAccess2;
 import org.eclipse.xtext.generator.IGeneratorContext;
 
 import java.io.*;
+import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Generates code from your model files on save.
@@ -26,7 +25,7 @@ public class ShedulerGenerator extends AbstractShedulerGenerator {
 	public void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
 		File inputFile = new File(resource.getURI().toFileString());
 		TaskPoolSet taskPools = (TaskPoolSet) resource.getContents().get(0);
-		String inputFileName = inputFile.getName().split("\\.")[0];
+		String inputFileName = inputFile.getName().split("\\.")[0].replaceAll("\\W", "_");
 		try {
 			var runtimeClass = javaTemplateFile("ShedulerRuntime");
 			fsa.generateFile("ShedulerRuntime.java", runtimeClass);
@@ -72,66 +71,41 @@ public class ShedulerGenerator extends AbstractShedulerGenerator {
 		return sb.toString();
 	}
 	
-	private String generateTaskPool(TaskPool taskPool) {
+	private String generateTaskPool(TaskPool pool) {
 		StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < taskPool.getTasks().size(); i++) {
-			sb.append(generateTask(i, taskPool.getTasks().get(i)));
-			sb.append("\n");
+		List<Task> tasks = pool.getTasks();
+		// 1. declare all tasks
+		for (int i = 0; i < tasks.size(); i++) {
+			sb.append(generateTask(i, tasks.get(i))).append("\n");
+		}
+		// 2. schedule them
+		for (int i = 0; i < tasks.size(); i++) {
+			sb.append("runtime.schedule(task").append(i).append(");\n");
 		}
 		return sb.toString();
 	}
 
 	private String generateTask(int i, Task task) {
-		if (task.getAbsolute() == null && task.getRelative() != null) {
-			return generateRelativeTask(i, task);
-		} else if (task.getAbsolute() != null && task.getRelative() == null) {
-			return generateAbsoluteTask(i, task);
+		String args = javaString(task.getName()) + ", " + javaString(task.getCommand()) + ", " + javaString(task.getEntrypoint());
+		String factory;
+		if (task.getRelative() != null) {
+			factory = "in(" + args + ", Duration.parse(" + javaString(TimeUtils.toDuration(task.getRelative()).toString()) + "))";
+		} else if (task.getAbsolute() != null) {
+			factory = "at(" + args + ", LocalDateTime.parse(" + javaString(TimeUtils.toLocalDateTime(task.getAbsolute()).toString()) + "))";
 		} else {
-			throw new Error("Buggy generator: task " + i + " has both absolute and relative time.");
+			throw new UnsupportedOperationException("before/after tasks are not supported yet"); // replaced in Ex 5
 		}
-	}
-
-	private String templateForAbsoluteTask(Task task) {
-		var template = "ShedulerTask task__INDEX__ = ShedulerTask.at(__NAME__, \"__CMD__\", \"__ENTRY__\", LocalDateTime.parse(\"__WHEN__\"));";
+		String code = "ShedulerTask task" + i + " = ShedulerTask." + factory + ";";
 		if (task.getPeriod() != null) {
-			template += "\ntask__INDEX__.setPeriodic(Duration.parse(\"__PERIOD__\"));";
+			code += "\ntask" + i + ".setPeriod(Duration.parse(" + javaString(TimeUtils.toDuration(task.getPeriod()).toString()) + "));";
 		}
-		return template;
+		return code;
 	}
 
-	private String generateAbsoluteTask(int i, Task task) {
-		return replace(
-				templateForAbsoluteTask(task),
-				Map.of(
-						"INDEX", String.valueOf(i),
-						"NAME", task.getName() == null ? "null" : "\"" + task.getName() + "\"",
-						"CMD", task.getCommand(),
-						"ENTRY", task.getEntrypoint(),
-						"WHEN", TimeUtils.toLocalDateTime(task.getAbsolute()).toString(),
-						"PERIOD", task.getPeriod() == null ? "" : TimeUtils.toDuration(task.getPeriod()).toString()
-				)
-		);
-	}
-
-	private String templateForRelativeTask(Task task) {
-		var template = "ShedulerTask task__INDEX__ = ShedulerTask.in(__NAME__, \"__CMD__\", \"__ENTRY__\", Duration.parse(\"__WHEN__\"));";
-		if (task.getPeriod() != null) {
-			template += "\ntask__INDEX__.setPeriodic(Duration.parse(\"__PERIOD__\"));";
-		}
-		return template;
-	}
-
-	private String generateRelativeTask(int i, Task task) {
-		return replace(
-				templateForRelativeTask(task),
-				Map.of(
-						"INDEX", String.valueOf(i),
-						"NAME", task.getName() == null ? "null" : "\"" + task.getName() + "\"",
-						"CMD", task.getCommand(),
-						"ENTRY", task.getEntrypoint(),
-						"WHEN", TimeUtils.toDuration(task.getRelative()).toString(),
-						"PERIOD", task.getPeriod() == null ? "" : TimeUtils.toDuration(task.getPeriod()).toString()
-				)
-		);
+	/** Renders a Java string literal (or the {@code null} literal). */
+	static String javaString(String s) {
+		if (s == null) return "null";
+		return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"")
+				.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "\"";
 	}
 }

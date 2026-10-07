@@ -5,90 +5,82 @@ package it.unibo.spe.mdd.sheduler.tests;
 
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import it.unibo.spe.mdd.sheduler.sheduler.TaskPoolSet;
 import org.eclipse.emf.common.util.URI;
-import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.xtext.generator.GeneratorContext;
-import org.eclipse.xtext.generator.GeneratorDelegate;
-import org.eclipse.xtext.generator.JavaIoFileSystemAccess;
+import org.eclipse.xtext.generator.IFileSystemAccess;
+import org.eclipse.xtext.generator.IGenerator2;
+import org.eclipse.xtext.generator.InMemoryFileSystemAccess;
 import org.eclipse.xtext.testing.InjectWith;
 import org.eclipse.xtext.testing.extensions.InjectionExtension;
-import org.eclipse.xtext.util.CancelIndicator;
-import org.eclipse.xtext.validation.CheckMode;
-import org.eclipse.xtext.validation.IResourceValidator;
-import org.eclipse.xtext.validation.Issue;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
+import org.eclipse.xtext.testing.util.ParseHelper;
+import org.eclipse.xtext.testing.validation.ValidationTestHelper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 
-import java.io.File;
-import java.io.IOException;
+import javax.tools.ToolProvider;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(InjectionExtension.class)
 @InjectWith(ShedulerInjectorProvider.class)
-class ShedulerGeneratorTest extends AbstractTest {
+class ShedulerGeneratorTest {
+	private static final String MODEL = """
+			pool p {
+			  schedule task periodic { command "echo \\"quoted\\" \\\\ back" entry point "/bin/sh -c" in 5 minutes repeat every 48 hours }
+			  schedule task absolute { command "echo abs" at 2099/01/01 10:00 }
+			}
+			""";
+
 	@Inject
-	private GeneratorDelegate generator;
+	private ParseHelper<TaskPoolSet> parseHelper;
+
+	@Inject
+	private ValidationTestHelper validationTestHelper;
 
 	@Inject
 	private Provider<ResourceSet> resourceSetProvider;
 
 	@Inject
-	private IResourceValidator validator;
+	private IGenerator2 generator;
 
-	@Inject
-	private JavaIoFileSystemAccess fileAccess;
-
-	private static File workingDir;
-	private static File sourceFile;
-	private static File outputDir;
-	private static File generatedSystemFile;
-	private static File generatedRuntimeFile;
-	private static File generatedTaskFile;
-
-	@BeforeAll
-	public static void setUpAll() throws IOException {
-		sourceFile = createTestFile("HelloWorld", loadResourceAsStringByName("HelloWorld.shed"));
-		workingDir = sourceFile.getParentFile();
-		outputDir = new File(workingDir, "src-gen");
-		if (outputDir.exists()) {
-			outputDir.delete();
-		}
-		generatedSystemFile = new File(outputDir, "ShedulerSystem_" + sourceFile.getName().split("\\.")[0] + ".java");
-		generatedRuntimeFile = new File(outputDir, "ShedulerRuntime.java");
-		generatedTaskFile = new File(outputDir, "ShedulerTask.java");
-	}
-
-	private void generate(File inputFile) {
-		ResourceSet set = resourceSetProvider.get();
-		Resource resource = set.getResource(URI.createFileURI(inputFile.getAbsolutePath()), true);
-
-		// Validate the resource
-		List<Issue> list = validator.validate(resource, CheckMode.ALL, CancelIndicator.NullImpl);
-		if (!list.isEmpty()) {
-			for (Issue issue : list) {
-				Assertions.fail(issue.getMessage());
-			}
-			return;
-		}
-
-		// Configure and start the generator
-		fileAccess.setOutputPath(outputDir.getAbsolutePath());
-		GeneratorContext context = new GeneratorContext();
-		context.setCancelIndicator(CancelIndicator.NullImpl);
-		generator.generate(resource, fileAccess, context);
-	}
+	@TempDir
+	Path tempDir;
 
 	@Test
-	public void generate() throws Exception {
-		generate(sourceFile);
-		System.out.println("Generated files in " + outputDir.getAbsolutePath());
-		assertTrue(generatedSystemFile.exists());
-		assertTrue(generatedRuntimeFile.exists());
-		assertTrue(generatedTaskFile.exists());
+	void generatedCodeCompiles() throws Exception {
+		TaskPoolSet model = parseHelper.parse(MODEL, URI.createFileURI(tempDir.resolve("Sample.shed").toString()), resourceSetProvider.get());
+		validationTestHelper.assertNoErrors(model);
+
+		InMemoryFileSystemAccess fsa = new InMemoryFileSystemAccess();
+		generator.doGenerate(model.eResource(), fsa, new GeneratorContext());
+		Map<String, CharSequence> files = fsa.getTextFiles();
+
+		List<String> paths = new ArrayList<>();
+		for (String name : List.of("ShedulerRuntime.java", "ShedulerTask.java", "ShedulerSystem_Sample.java")) {
+			CharSequence content = files.get(IFileSystemAccess.DEFAULT_OUTPUT + name);
+			assertNotNull(content, name + " not generated");
+			Path path = tempDir.resolve("src").resolve(name);
+			Files.createDirectories(path.getParent());
+			Files.writeString(path, content);
+			paths.add(path.toString());
+		}
+
+		String system = files.get(IFileSystemAccess.DEFAULT_OUTPUT + "ShedulerSystem_Sample.java").toString();
+		assertTrue(system.contains("ShedulerTask.at(\"absolute\", \"echo abs\", null, LocalDateTime.parse(\"2099-01-01T10:00\"))"), system);
+		assertTrue(system.contains("task0.setPeriod(Duration.parse(\"PT48H\"))"), system);
+		assertTrue(system.contains("runtime.schedule(task0)"), system);
+		assertTrue(system.contains("runtime.schedule(task1)"), system);
+
+		List<String> args = new ArrayList<>(List.of("-d", tempDir.resolve("out").toString()));
+		args.addAll(paths);
+		assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, args.toArray(String[]::new)));
 	}
 }

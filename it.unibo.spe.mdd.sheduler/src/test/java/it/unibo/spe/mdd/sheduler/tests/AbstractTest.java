@@ -11,12 +11,4 @@ public class AbstractTest {
             throw new IllegalArgumentException("Cannot load resource " + name, e);
         }
     }
-
-    protected static File createTestFile(String name, String content) throws IOException {
-        File file = File.createTempFile(name, ".shed");
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-            writer.write(content);
-        }
-        return file;
-    }
 }
