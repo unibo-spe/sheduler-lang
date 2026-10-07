@@ -111,4 +111,23 @@ public class ShedulerValidator extends AbstractShedulerValidator {
             }
         }
     }
+
+    @Check(CheckType.FAST)
+    public void ensureDependentTasksAreNotPeriodic(Task task) {
+        if ((task.getBefore() != null || task.getAfter() != null) && task.getPeriod() != null) {
+            error("Tasks scheduled before/after another task cannot be periodic", task, ShedulerPackage.Literals.TASK__PERIOD);
+        }
+    }
+
+    @Check
+    public void ensurePeriodIsAtLeastOneMillisecond(Task task) {
+        if (task.getPeriod() == null) return;
+        try {
+            if (TimeUtils.toDuration(task.getPeriod()).toMillis() < 1) {
+                error("Period must be at least 1 millisecond", task, ShedulerPackage.Literals.TASK__PERIOD);
+            }
+        } catch (ArithmeticException e) {
+            // reported by checkRelativeTimeIsRepresentable
+        }
+    }
 }
