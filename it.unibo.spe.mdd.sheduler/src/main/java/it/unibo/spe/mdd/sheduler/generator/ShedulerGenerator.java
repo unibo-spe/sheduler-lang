@@ -17,7 +17,17 @@ import java.util.Map;
 
 /**
  * Generates code from your model files on save.
- * 
+ * <p>
+ * For a file {@code Foo.shed}, it generates 3 Java files:
+ * <ul>
+ *     <li>{@code ShedulerRuntime.java} and {@code ShedulerTask.java}: copied verbatim from the templates
+ *     (i.e. the run-time support, which is the same for every model);</li>
+ *     <li>{@code ShedulerSystem_Foo.java}: the model-specific part, with a {@code main} method calling one
+ *     {@code pool_X(runtime)} method per task pool, each one creating and scheduling the tasks of that pool.</li>
+ * </ul>
+ * Templates live in {@code src/main/resources}, and contain {@code __KEY__} placeholders
+ * (see {@link AbstractShedulerGenerator#replace}).
+ * <p>
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#code-generation
  */
 public class ShedulerGenerator extends AbstractShedulerGenerator {
@@ -25,6 +35,7 @@ public class ShedulerGenerator extends AbstractShedulerGenerator {
 	public void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
 		File inputFile = new File(resource.getURI().toFileString());
 		TaskPoolSet taskPools = (TaskPoolSet) resource.getContents().get(0);
+		// the file name becomes part of a Java class name, so non-identifier chars (e.g. '-') are replaced
 		String inputFileName = inputFile.getName().split("\\.")[0].replaceAll("\\W", "_");
 		try {
 			var runtimeClass = javaTemplateFile("ShedulerRuntime");
@@ -44,10 +55,12 @@ public class ShedulerGenerator extends AbstractShedulerGenerator {
 		}
 	}
 
+	// anonymous pools are named after their position in the file
 	private String generateTaskPoolMethodName(TaskPool taskPool, int index) {
 		return "pool_" + (taskPool.getName() == null ? Integer.toString(index) : taskPool.getName());
 	}
 
+	// one `private static void pool_X(ShedulerRuntime runtime) { ... }` method per pool
 	private String generateTaskPoolsDefinitions(TaskPoolSet taskPools) throws IOException {
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < taskPools.getPools().size(); i++) {
@@ -61,6 +74,7 @@ public class ShedulerGenerator extends AbstractShedulerGenerator {
 		return sb.toString();
 	}
 	
+	// one `pool_X(runtime);` call per pool, to be put in main
 	private String generateTaskPoolsCalls(TaskPoolSet taskPools) {
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < taskPools.getPools().size(); i++) {
@@ -71,6 +85,11 @@ public class ShedulerGenerator extends AbstractShedulerGenerator {
 		return sb.toString();
 	}
 	
+	/*
+	 * Body of a pool method. Each task becomes a local variable named after its position in the pool (task0, task1, ...).
+	 * All variables are declared first, so that the wiring step can refer to any of them,
+	 * regardless of whether the anchor task comes before or after the dependent one in the file.
+	 */
 	private String generateTaskPool(TaskPool pool) {
 		StringBuilder sb = new StringBuilder();
 		List<Task> tasks = pool.getTasks();
@@ -78,7 +97,8 @@ public class ShedulerGenerator extends AbstractShedulerGenerator {
 		for (int i = 0; i < tasks.size(); i++) {
 			sb.append(generateTask(i, tasks.get(i))).append("\n");
 		}
-		// 2. wire dependencies (before/after are pool-local, cf. ShedulerScopeProvider)
+		// 2. wire dependencies (before/after are pool-local, cf. ShedulerScopeProvider, so indexOf always finds the anchor):
+		//    `x after y` becomes `y.addSuccessor(x)`, and `x before y` becomes `y.addPredecessor(x)`
 		for (int i = 0; i < tasks.size(); i++) {
 			Task task = tasks.get(i);
 			if (task.getAfter() != null) {
@@ -97,6 +117,13 @@ public class ShedulerGenerator extends AbstractShedulerGenerator {
 		return sb.toString();
 	}
 
+	/*
+	 * E.g. `schedule task t { command "echo hi" in 5 minutes repeat every 1 h }` becomes:
+	 *     ShedulerTask task0 = ShedulerTask.in("t", "echo hi", null, Duration.parse("PT5M"));
+	 *     task0.setPeriod(Duration.parse("PT1H"));
+	 * Times are computed at generation time, and embedded in the code in their ISO-8601 textual form,
+	 * which Duration.parse / LocalDateTime.parse turn back into objects at run time.
+	 */
 	private String generateTask(int i, Task task) {
 		String args = javaString(task.getName()) + ", " + javaString(task.getCommand()) + ", " + javaString(task.getEntrypoint());
 		String factory;
@@ -114,7 +141,11 @@ public class ShedulerGenerator extends AbstractShedulerGenerator {
 		return code;
 	}
 
-	/** Renders a Java string literal (or the {@code null} literal). */
+	/**
+	 * Renders a Java string literal (or the {@code null} literal).
+	 * User-provided strings must be escaped, otherwise e.g. {@code command "echo \"hi\""} would produce
+	 * {@code "echo "hi""}, which does not compile.
+	 */
 	static String javaString(String s) {
 		if (s == null) return "null";
 		return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"")

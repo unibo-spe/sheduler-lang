@@ -17,11 +17,20 @@ import java.util.Set;
 
 /**
  * This class contains custom validation rules. 
+ * <p>
+ * Xtext calls every {@code @Check} method on every model element whose type matches the method's parameter.
+ * {@code CheckType.FAST} checks run on every keystroke in the editor, the others (default: {@code NORMAL}) on save.
+ * {@code error(...)} marks the model as invalid (no code generation / interpretation),
+ * while {@code warning(...)} is just reported to the user.
+ * <p>
+ * Beware: if a check throws an exception, Xtext logs it and silently skips the remaining checks,
+ * hence the try/catch blocks below.
  *
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#validation
  */
 public class ShedulerValidator extends AbstractShedulerValidator {
 	
+    // Ex 1.1: the runtime needs durations in milliseconds, as a long, which may overflow (e.g. `in 2147483647 years`)
     @Check
     public void checkRelativeTimeIsRepresentable(RelativeTime relativeTime) {
         try {
@@ -31,6 +40,8 @@ public class ShedulerValidator extends AbstractShedulerValidator {
         }
     }
 
+    // Ex 1.2: LocalDateTime.of throws DateTimeException for invalid dates (e.g. Feb 31) or out-of-range years,
+    // and the delay from now may overflow the milliseconds a long can hold
     @Check
     public void checkAbsoluteTimeIsRepresentable(AbsoluteTime absoluteTime) {
         try {
@@ -40,6 +51,7 @@ public class ShedulerValidator extends AbstractShedulerValidator {
         }
     }
 
+    // Ex 1.3: scheduling something in the past makes little sense
     @Check
     public void checkAbsoluteTimeIsInTheFuture(AbsoluteTime absoluteTime) {
         LocalDateTime dateTime;
@@ -66,6 +78,7 @@ public class ShedulerValidator extends AbstractShedulerValidator {
         }
     }
 
+    // Ex 1.4
     @Check(CheckType.FAST)
     public void ensureClockTimeIsValid(ClockTime clockTime) { // INT cannot be negative in the grammar
         if (clockTime.getHour() > 23) {
@@ -85,6 +98,7 @@ public class ShedulerValidator extends AbstractShedulerValidator {
         }
     }
 
+    // Ex 1.5: `in 0 s` is pointless; there are no upper bounds though, as `48 hours` is a perfectly fine time span
     @Check(CheckType.FAST)
     public void ensureTimeSpanIsValid(TimeSpan timeSpan) {
         if (timeSpan.getDuration() <= 0) { // INT cannot be negative in the grammar, so this effectively catches 0
@@ -92,6 +106,7 @@ public class ShedulerValidator extends AbstractShedulerValidator {
         }
     }
 
+    // Ex 1.6: Set.add returns false if the name was already there; anonymous tasks (name == null) are skipped
     @Check(CheckType.FAST)
     public void ensureTaskNamesAreUniqueWithinPool(TaskPool pool) {
         Set<String> names = new HashSet<>();
@@ -102,6 +117,7 @@ public class ShedulerValidator extends AbstractShedulerValidator {
         }
     }
 
+    // Ex 1.7: same as above, for pools
     @Check(CheckType.FAST)
     public void ensurePoolNamesAreUniqueWithinPool(TaskPoolSet pools) {
         Set<String> names = new HashSet<>();
@@ -112,6 +128,7 @@ public class ShedulerValidator extends AbstractShedulerValidator {
         }
     }
 
+    // Ex 1.8: a dependent task runs whenever its anchor does, so a period of its own would be meaningless
     @Check(CheckType.FAST)
     public void ensureDependentTasksAreNotPeriodic(Task task) {
         if ((task.getBefore() != null || task.getAfter() != null) && task.getPeriod() != null) {
@@ -119,6 +136,8 @@ public class ShedulerValidator extends AbstractShedulerValidator {
         }
     }
 
+    // not requested by the exercises: the runtime works in milliseconds, so `repeat every 500 ns` would become a
+    // period of 0 ms, which ScheduledExecutorService rejects with an IllegalArgumentException
     @Check
     public void ensurePeriodIsAtLeastOneMillisecond(Task task) {
         if (task.getPeriod() == null) return;
@@ -131,6 +150,12 @@ public class ShedulerValidator extends AbstractShedulerValidator {
         }
     }
 
+    /*
+     * Ex 5: `a after b` + `b after a` means neither task ever runs.
+     * Each task has at most one anchor (before/after are alternatives in the grammar), so starting from a task and
+     * following anchors either reaches a timed task (anchor == null) or loops forever: the `visited` set detects the loop.
+     * Only tasks which are part of the loop get the error (current == task), not those merely leading into it.
+     */
     @Check
     public void ensureNoDependencyCycles(Task task) {
         Set<Task> visited = new HashSet<>();

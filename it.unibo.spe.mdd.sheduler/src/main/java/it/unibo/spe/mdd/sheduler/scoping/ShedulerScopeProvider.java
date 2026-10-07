@@ -25,6 +25,8 @@ public class ShedulerScopeProvider extends AbstractShedulerScopeProvider {
 
     @Override
     public IScope getScope(EObject context, EReference reference) {
+        // Ex 2: the scope is the set of candidates a cross-reference may point to (and what content assist proposes).
+        // For `before x` / `after x`, candidates are the named tasks of the same pool, except the task itself.
         if (context instanceof Task) {
             if (Set.of(ShedulerPackage.Literals.TASK__AFTER, ShedulerPackage.Literals.TASK__BEFORE).contains(reference)) {
                 TaskPool pool = EcoreUtil2.getContainerOfType(context, TaskPool.class);
