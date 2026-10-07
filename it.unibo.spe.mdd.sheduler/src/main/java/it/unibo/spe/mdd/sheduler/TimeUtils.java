@@ -17,7 +17,7 @@ public class TimeUtils {
             case HOURS -> Duration.ofHours(timeSpan.getDuration());
             case DAYS -> Duration.ofDays(timeSpan.getDuration());
             case WEEKS -> Duration.ofDays(timeSpan.getDuration() * 7L);
-            case YEARS -> Duration.ofDays(timeSpan.getDuration() * 375L);
+            case YEARS -> Duration.ofDays(timeSpan.getDuration() * 365L);
         };
     }
 
@@ -28,11 +28,12 @@ public class TimeUtils {
                 .orElse(Duration.ZERO);
     }
 
+    // the grammar has no microsecond field, so nanosecond (0-999) holds only the sub-microsecond digits (known limitation)
     public static LocalTime toLocalTime(ClockTime clockTime) {
         return LocalTime.of(clockTime.getHour(),
                 clockTime.getMinute(),
                 clockTime.getSecond(),
-                clockTime.getMillisecond() * 1_000 + clockTime.getNanosecond());
+                clockTime.getMillisecond() * 1_000_000 + clockTime.getNanosecond());
     }
 
     public static LocalDate toLocalDate(Date date) {
