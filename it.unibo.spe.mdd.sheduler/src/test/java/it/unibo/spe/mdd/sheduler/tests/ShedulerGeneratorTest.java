@@ -32,13 +32,14 @@ import static org.junit.jupiter.api.Assertions.*;
 @ExtendWith(InjectionExtension.class)
 @InjectWith(ShedulerInjectorProvider.class)
 class ShedulerGeneratorTest {
-	private static final String MODEL = """
-			pool p {
+	private static final String TIMED_TASKS = """
 			  schedule task periodic { command "echo \\"quoted\\" \\\\ back" entry point "/bin/sh -c" in 5 minutes repeat every 48 hours }
 			  schedule task absolute { command "echo abs" at 2099/01/01 10:00 }
+			""";
+
+	private static final String DEPENDENT_TASKS = """
 			  schedule task first { command "echo first" before periodic }
 			  schedule task last { command "echo last" after periodic }
-			}
 			""";
 
 	@Inject
@@ -57,8 +58,28 @@ class ShedulerGeneratorTest {
 	Path tempDir;
 
 	@Test
-	void generatedCodeCompiles() throws Exception {
-		TaskPoolSet model = parseHelper.parse(MODEL, URI.createFileURI(tempDir.resolve("Sample.shed").toString()), resourceSetProvider.get());
+	void timedTasks() throws Exception {
+		String system = generateAndCompile("pool p {\n" + TIMED_TASKS + "}");
+		assertTrue(system.contains("ShedulerTask.at(\"absolute\", \"echo abs\", null, LocalDateTime.parse(\"2099-01-01T10:00\"))"), system);
+		assertTrue(system.contains("task0.setPeriod(Duration.parse(\"PT48H\"))"), system);
+		assertTrue(system.contains("runtime.schedule(task0)"), system);
+		assertTrue(system.contains("runtime.schedule(task1)"), system);
+	}
+
+	@Test
+	void dependentTasks() throws Exception {
+		String system = generateAndCompile("pool p {\n" + TIMED_TASKS + DEPENDENT_TASKS + "}");
+		assertTrue(system.contains("ShedulerTask.dependent(\"first\""), system);
+		assertTrue(system.contains("task0.addPredecessor(task2)"), system);
+		assertTrue(system.contains("task0.addSuccessor(task3)"), system);
+		assertTrue(system.contains("runtime.schedule(task0)"), system);
+		assertFalse(system.contains("runtime.schedule(task2)"), system);
+		assertFalse(system.contains("runtime.schedule(task3)"), system);
+	}
+
+	/** Generates code for the given model, checks that it compiles, and returns the ShedulerSystem_Sample class. */
+	private String generateAndCompile(String text) throws Exception {
+		TaskPoolSet model = parseHelper.parse(text, URI.createFileURI(tempDir.resolve("Sample.shed").toString()), resourceSetProvider.get());
 		validationTestHelper.assertNoErrors(model);
 
 		InMemoryFileSystemAccess fsa = new InMemoryFileSystemAccess();
@@ -75,19 +96,9 @@ class ShedulerGeneratorTest {
 			paths.add(path.toString());
 		}
 
-		String system = files.get(IFileSystemAccess.DEFAULT_OUTPUT + "ShedulerSystem_Sample.java").toString();
-		assertTrue(system.contains("ShedulerTask.at(\"absolute\", \"echo abs\", null, LocalDateTime.parse(\"2099-01-01T10:00\"))"), system);
-		assertTrue(system.contains("task0.setPeriod(Duration.parse(\"PT48H\"))"), system);
-		assertTrue(system.contains("runtime.schedule(task0)"), system);
-		assertTrue(system.contains("runtime.schedule(task1)"), system);
-		assertTrue(system.contains("ShedulerTask.dependent(\"first\""), system);
-		assertTrue(system.contains("task0.addPredecessor(task2)"), system);
-		assertTrue(system.contains("task0.addSuccessor(task3)"), system);
-		assertFalse(system.contains("runtime.schedule(task2)"), system);
-		assertFalse(system.contains("runtime.schedule(task3)"), system);
-
 		List<String> args = new ArrayList<>(List.of("-d", tempDir.resolve("out").toString()));
 		args.addAll(paths);
-		assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, args.toArray(String[]::new)));
+		assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, args.toArray(String[]::new)), "generated code does not compile");
+		return files.get(IFileSystemAccess.DEFAULT_OUTPUT + "ShedulerSystem_Sample.java").toString();
 	}
 }
