@@ -19,7 +19,9 @@ import org.eclipse.xtext.validation.CheckMode;
 import org.eclipse.xtext.validation.IResourceValidator;
 import org.eclipse.xtext.validation.Issue;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 
 public class ShedulerInterpreter {
@@ -49,8 +51,22 @@ public class ShedulerInterpreter {
         TaskPoolSet taskPools = (TaskPoolSet) resource.getContents().get(0);
         ShedulerRuntime runtime = new ShedulerRuntime(Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors()));
         for (TaskPool pool : taskPools.getPools()) {
+            Map<Task, ShedulerTask> tasks = new LinkedHashMap<>(); // EObjects use identity equality
             for (Task task : pool.getTasks()) {
-                runtime.schedule(toShedulerTask(task));
+                tasks.put(task, toShedulerTask(task));
+            }
+            for (Map.Entry<Task, ShedulerTask> entry : tasks.entrySet()) {
+                Task task = entry.getKey();
+                if (task.getAfter() != null) {
+                    tasks.get(task.getAfter()).addSuccessor(entry.getValue());
+                } else if (task.getBefore() != null) {
+                    tasks.get(task.getBefore()).addPredecessor(entry.getValue());
+                }
+            }
+            for (ShedulerTask t : tasks.values()) {
+                if (!t.isDependent()) {
+                    runtime.schedule(t);
+                }
             }
         }
         // executor threads are non-daemon: the JVM stays alive until killed (Ctrl+C)
@@ -63,7 +79,7 @@ public class ShedulerInterpreter {
         } else if (task.getAbsolute() != null) {
             result = ShedulerTask.at(task.getName(), task.getCommand(), task.getEntrypoint(), TimeUtils.toLocalDateTime(task.getAbsolute()));
         } else {
-            throw new UnsupportedOperationException("before/after tasks are not supported yet"); // replaced in Ex 5
+            result = ShedulerTask.dependent(task.getName(), task.getCommand(), task.getEntrypoint());
         }
         if (task.getPeriod() != null) {
             result.setPeriod(TimeUtils.toDuration(task.getPeriod()));
